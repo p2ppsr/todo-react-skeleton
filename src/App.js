@@ -17,6 +17,8 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import GitHubIcon from '@mui/icons-material/GitHub'
 
+const TODO_PROTO_ADDR = 'my todo protocol'
+
 // These are some basic styling rules for the React application.
 // This app uses React (https://reactjs.org) for its user interface.
 // We are also using MUI (https://mui.com) for buttons and dialogs.
@@ -103,8 +105,8 @@ const App = () => {
 
       // --- business logic would go here ---
       console.log('Clicked the "OK" button in the Create Task dialog!')
-      console.log(`Task:   ${createTask}`)
-      console.log(`Amount: ${createAmount}`)
+      const serializedTask = [TODO_PROTO_ADDR, createTask, createAmount]
+      console.log('Serialized task: ', serializedTask)
 
       setCreateTask('')
       setCreateAmount(1000)
