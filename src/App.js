@@ -16,6 +16,8 @@ import { makeStyles } from '@mui/styles'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import GitHubIcon from '@mui/icons-material/GitHub'
+import BabbageSDK from '@babbage/sdk'
+import PushDrop from 'pushdrop'
 
 const TODO_PROTO_ADDR = 'my todo protocol'
 
@@ -105,8 +107,40 @@ const App = () => {
 
       // --- business logic would go here ---
       console.log('Clicked the "OK" button in the Create Task dialog!')
-      const serializedTask = [TODO_PROTO_ADDR, createTask, createAmount]
+      const serializedTask = [
+        Buffer.from(TODO_PROTO_ADDR),
+        Buffer.from(createTask),
+        Buffer.from('' + createAmount) // Ensure this is a string!
+      ]
       console.log('Serialized task: ', serializedTask)
+      const bitcoinOutputScript = await PushDrop.create({
+        fields: serializedTask,
+        protocolID: 'todo list',
+        keyID: '1'
+      })
+      console.log('Created Bitcoin output script: ', bitcoinOutputScript)
+
+      const newToDoToken = await BabbageSDK.createAction({
+        outputs: [{
+          satoshis: Number(createAmount),
+          script: bitcoinOutputScript
+        }],
+        description: `Create a TODO task: "${createTask}"`
+      })
+      console.log('Got New ToDo Token: ', newToDoToken)
+
+      setTasks(originalTasks => ([
+        {
+          task: createTask,
+          sats: Number(createAmount),
+          token: {
+            ...newToDoToken,
+            lockingScript: bitcoinOutputScript,
+            outputIndex: 0
+          }
+        },
+        ...originalTasks
+      ]))
 
       setCreateTask('')
       setCreateAmount(1000)
