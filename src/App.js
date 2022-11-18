@@ -73,7 +73,7 @@ const App = () => {
         
         // --- business logic would go here ---
         console.log('Loaded the ToDo tasks when the page loaded!')
-        const newTasks = [{ task: 'Complete the ToDo tutorial', sats: 3301 }]
+        const newTasks = []
         setTasks(newTasks) // Pretend data, make sure to replace!
 
       } catch (e) {
@@ -109,8 +109,7 @@ const App = () => {
       console.log('Clicked the "OK" button in the Create Task dialog!')
       const serializedTask = [
         Buffer.from(TODO_PROTO_ADDR),
-        Buffer.from(createTask),
-        Buffer.from('' + createAmount) // Ensure this is a string!
+        Buffer.from(createTask)
       ]
       console.log('Serialized task: ', serializedTask)
       const bitcoinOutputScript = await PushDrop.create({
@@ -171,6 +170,33 @@ const App = () => {
       // --- business logic would go here ---
       console.log('Clicked the "Complete" button in the Complete Task dialog!')
       console.log('Selected task: ', selectedTask)
+      const unlockingScript = await PushDrop.redeem({
+        protocolID: 'todo list',
+        keyID: '1',
+        prevTxId: selectedTask.token.txid,
+        outputIndex: selectedTask.token.outputIndex,
+        lockingScript: selectedTask.token.lockingScript,
+        outputAmount: selectedTask.sats
+      })
+      console.log('Got token unlocking script', unlockingScript)
+
+      const tokenRedemption = await BabbageSDK.createAction({
+        description: `Complete a TODO task: "${selectedTask.task}"`,
+        inputs: {
+          [selectedTask.token.txid]: {
+            ...selectedTask.token,
+            outputsToRedeem: [{
+              index: selectedTask.token.outputIndex,
+              unlockingScript
+            }]
+          }
+        }
+      })
+      console.log('Token redemption transaction', tokenRedemption)
+      setTasks(oldTasks => {
+        oldTasks.splice(oldTasks.findIndex(x => x === selectedTask), 1)
+        return oldTasks
+      })
 
       setSelectedTask({})
       setCompleteOpen(false)
