@@ -107,9 +107,14 @@ const App = () => {
 
       // --- business logic would go here ---
       console.log('Clicked the "OK" button in the Create Task dialog!')
+      const encryptedTask = await BabbageSDK.encrypt({
+        plaintext: Uint8Array.from(Buffer.from(createTask)),
+        protocolID: 'todo list',
+        keyID: '1'
+      })
       const serializedTask = [
         Buffer.from(TODO_PROTO_ADDR),
-        Buffer.from(createTask)
+        Buffer.from(encryptedTask)
       ]
       console.log('Serialized task: ', serializedTask)
       const bitcoinOutputScript = await PushDrop.create({
