@@ -73,8 +73,47 @@ const App = () => {
         
         // --- business logic would go here ---
         console.log('Loaded the ToDo tasks when the page loaded!')
-        const newTasks = []
-        setTasks(newTasks) // Pretend data, make sure to replace!
+        const newTasks = await BabbageSDK.getTransactionOutputs({
+          basket: 'todo tokens',
+          spendable: true,
+          includeEnvelope: true
+        })
+        const decryptedTasks = await Promise
+          .all(newTasks.map(async task => {
+            try {
+              const decodedTask = PushDrop.decode({
+                script: task.outputScript,
+                fieldFormat: 'buffer'
+              })
+              console.log('decoded task', decodedTask)
+              const encryptedTask = decodedTask.fields[1]
+              const decryptedTask = await BabbageSDK.decrypt({
+                ciphertext: encryptedTask,
+                protocolID: 'todo list',
+                keyID: '1',
+                returnType: 'string'
+              })
+              return {
+                token: {
+                  ...task.envelope,
+                  lockingScript: task.outputScript,
+                  txid: task.txid,
+                  outputIndex: task.vout
+                },
+                sats: task.amount,
+                task: decryptedTask
+              }
+            } catch (e) {
+              // In case there are any errors, we'll handle them gracefully.
+              console.error('Error decrypting task:', e)
+              return {
+                ...task,
+                task: '[error] Unable to decrypt task!'
+              }
+            }
+          }))
+        setTasks(decryptedTasks)
+        console.log('loading decrypted tasks', decryptedTasks)
 
       } catch (e) {
         toast.error(`Failed to load ToDo tasks! Error: ${e.message}`)
@@ -127,7 +166,9 @@ const App = () => {
       const newToDoToken = await BabbageSDK.createAction({
         outputs: [{
           satoshis: Number(createAmount),
-          script: bitcoinOutputScript
+          script: bitcoinOutputScript,
+          basket: 'todo tokens',
+          description: 'New ToDo Token'
         }],
         description: `Create a TODO task: "${createTask}"`
       })
